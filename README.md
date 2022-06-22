@@ -1,2 +1,2 @@
-# hganchev-TwinCat_PartDispencerPLC
+# TwinCat_PartDispencerPLC
 fiverr project
