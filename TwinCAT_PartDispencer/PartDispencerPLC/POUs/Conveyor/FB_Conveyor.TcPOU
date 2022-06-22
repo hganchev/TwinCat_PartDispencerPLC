@@ -1,0 +1,367 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Conveyor" Id="{fdafce93-3154-463c-b7d9-b6ed5ce2df1a}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Conveyor
+VAR_INPUT
+	Station_1_Ready : BOOL;
+	Station_2_Ready : BOOL;
+END_VAR
+
+VAR_OUTPUT
+	At_Station_1	: BOOL;
+	At_Station_2	: BOOL;
+	At_Station_3	: BOOL;
+	sStatus			: STRING(255);
+	bError			: BOOL;
+END_VAR
+VAR_IN_OUT
+	ResetConvoyor		: BOOL;						// Reset Conveyor Logic
+END_VAR
+VAR
+	TimerTimeout		: TON;						// Used for Timeouts
+	
+	// Times
+	tTimeoutMoving		: TIME := T#5000MS; 		// Timeout When Stepper motor moving between positions
+	tTimeoutBowlLoading	: TIME := T#5000MS;			//
+	
+	iStep				: INT; 						// Step of machine logic
+	iStepClamp			: INT;
+	bLoadBowl			: BOOL;
+	bBowlLoaded			: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[a_LoadBowl();
+IF ResetConvoyor THEN
+	iStep := 0;
+	IO.oR7_NO_Contact := FALSE;
+END_IF
+CASE iStep OF 
+	0: // Start Bowl Loading
+		IF bError THEN
+			bError := FALSE;
+		END_IF
+		IF NOT Station_1_Ready
+		AND NOT Station_2_Ready
+		THEN
+			IF NOT IO.iConveyor_Home_Sensor
+			AND NOT IO.iConveyor_Position_1_Sensor
+			AND NOT IO.iConveyor_Position_2_Sensor 
+			AND NOT IO.iConveyor_Position_3_Sensor
+			THEN
+				iStep := 10;
+			ELSIF IO.iConveyor_Home_Sensor
+			AND NOT IO.iConveyor_Position_1_Sensor 
+			AND NOT IO.iConveyor_Position_2_Sensor
+			AND NOT IO.iConveyor_Position_3_Sensor
+			THEN
+				iStep := 20;	
+			ELSIF NOT IO.iConveyor_Home_Sensor
+			AND IO.iConveyor_Position_1_Sensor 
+			AND NOT IO.iConveyor_Position_2_Sensor
+			AND NOT IO.iConveyor_Position_3_Sensor
+			THEN
+				iStep := 10;
+			ELSIF IO.iConveyor_Home_Sensor
+			AND IO.iConveyor_Position_1_Sensor 
+			AND NOT IO.iConveyor_Position_2_Sensor
+			AND NOT IO.iConveyor_Position_3_Sensor
+			THEN
+				iStep := 20;
+			ELSIF NOT IO.iConveyor_Home_Sensor
+			AND IO.iConveyor_Position_1_Sensor 
+			AND IO.iConveyor_Position_2_Sensor
+			AND NOT IO.iConveyor_Position_3_Sensor
+			THEN
+				iStep := 30;
+			ELSIF IO.iConveyor_Position_3_Sensor THEN
+				sStatus := 'Waiting Remove the Bowl on station 3';
+			END_IF	
+		ELSE
+			iStep := 40;
+		END_IF
+// ======================= Start Cycle =====================================		
+	10: //Wait Bowl Loadin Start
+		bLoadBowl := TRUE;
+		sStatus := 'Loading Bowl on Conveyor Home';
+		IF NOT bBowlLoaded
+		AND iStepClamp > 0 THEN
+			iStep := 2;
+		END_IF
+	
+	11: // Wait Bowl on Conveyor
+		IF NOT bLoadBowl
+		AND bBowlLoaded THEN
+			iStep := 0;
+		END_IF
+		
+	20: // Start Send Bowl to Station 1 
+		sStatus := 'Moving Bowls';
+		IO.oR7_NO_Contact := TRUE;
+		IO.oDirection_of_Driver_7 := TRUE;
+		iStep := 11;
+		
+	21: // Wait Send Bowl to Station 1
+		TimerTimeout(IN := TRUE, PT:= tTimeoutMoving);
+		IF IO.iConveyor_Position_1_Sensor
+		AND NOT IO.iConveyor_Position_2_Sensor THEN
+			IO.oR7_NO_Contact := FALSE;
+			TimerTimeout(IN := FALSE);
+			iStep := 0;
+		ELSIF IO.iConveyor_Position_1_Sensor
+		AND IO.iConveyor_Position_2_Sensor THEN
+			IO.oR7_NO_Contact := FALSE;
+			TimerTimeout(IN := FALSE);
+			iStep := 0;
+		ELSIF TimerTimeout.Q THEN
+			sStatus := 'Timeout When Going to Position 1';
+			iStep := 1000; // Error
+		END_IF
+// ======================= Wait Stations Ready =============================				
+	30: // Wait Stations Ready
+		At_Station_1 := NOT Station_1_Ready;
+		At_Station_2 := NOT Station_2_Ready;
+		sStatus := 'Waiting for Stations Ready';
+		IF Station_1_Ready 
+		AND Station_2_Ready THEN
+			iStep := 40;
+		END_IF
+// ======================= End Cycle =====================================		
+	40: // Check End Cylce Conditions
+		sStatus := 'Checking End Cycle Conditions';
+		IF NOT IO.iConveyor_Home_Sensor
+		AND IO.iConveyor_Position_1_Sensor 
+		AND IO.iConveyor_Position_2_Sensor
+		AND NOT IO.iConveyor_Position_3_Sensor
+		THEN			
+			iStep := 50;
+		ELSIF NOT IO.iConveyor_Home_Sensor
+		AND NOT IO.iConveyor_Position_1_Sensor 
+		AND IO.iConveyor_Position_2_Sensor
+		AND NOT IO.iConveyor_Position_3_Sensor
+		THEN	
+			iStep := 50;
+		ELSIF NOT IO.iConveyor_Home_Sensor
+		AND NOT IO.iConveyor_Position_1_Sensor 
+		AND NOT IO.iConveyor_Position_2_Sensor
+		AND NOT IO.iConveyor_Position_3_Sensor
+		THEN	
+			iStep := 70;
+		ELSIF IO.iConveyor_Position_3_Sensor THEN
+			sStatus := 'Waiting Remove the Bowl on station 3';
+		END_IF
+		
+	50: // Start Moving Full Bowl to Station 3
+		sStatus := 'Moving Bowl 1 End Cycle';
+		IO.oR7_NO_Contact := TRUE;
+		IO.oDirection_of_Driver_7 := TRUE;
+		iStep := 51;
+	
+	51: // Wait on Station 3
+		TimerTimeout(IN := TRUE, PT:= tTimeoutMoving);
+		IF IO.iConveyor_Position_3_Sensor THEN
+			IO.oR7_NO_Contact := FALSE;
+			TimerTimeout(IN := FALSE);
+			iStep := 60;
+		ELSIF TimerTimeout.Q THEN
+			sStatus := 'Timeout When Going to Position 3';
+			iStep := 1000; // Error
+		END_IF
+		
+	60:// Wait remove Bowl Station 3
+		sStatus := 'Waiting Remove the Bowl on station 3';
+		IF NOT IO.iConveyor_Position_3_Sensor THEN
+			iStep := 40;
+		END_IF		
+		
+	70: //Start Reset Counters
+		Globals.bResetPartCount_Station1 := TRUE;
+		Globals.bResetPartCount_Station2 := TRUE;
+		iStep := 71;
+		
+	71: // Wait Reset Counters
+		sStatus := 'Waiting Part Counter Reset';
+		IF NOT Station_1_Ready
+		AND NOT Station_2_Ready
+		AND NOT Globals.bResetPartCount_Station1
+		AND NOT Globals.bResetPartCount_Station2
+		THEN
+			iStep := 0;
+		END_IF
+	
+	1000: // ERROR
+		TimerTimeout(IN := FALSE);
+		bError := TRUE;
+		IO.oR7_NO_Contact := FALSE;
+END_CASE]]></ST>
+    </Implementation>
+    <Action Name="a_LoadBowl" Id="{c1d3d41d-35e3-4660-b2c0-4e4c82b6c273}">
+      <Implementation>
+        <ST><![CDATA[IF NOT bLoadBowl THEN
+	iStepClamp := 0;
+	IO.oR8_NO_Contact := FALSE;
+ELSE
+	CASE iStepClamp OF
+		0: // Wait Bowls in clamp
+			IF NOT IO.iBowl_10_percent_full THEN
+				sStatus := 'Bowls in clamp under 10 percent!';
+			ELSE
+				bBowlLoaded := FALSE;
+				iStepClamp := 1;
+			END_IF
+			
+		1: // Check Bowl on Home
+			IF NOT IO.iConveyor_Home_Sensor THEN
+				iStepClamp := 10;
+			ELSE
+				iStepClamp := 30;
+			END_IF
+			
+		10: //Start Open Clamp
+			IO.oR8_NO_Contact := TRUE;
+			IO.oDirection_of_Driver_8 := TRUE;
+			iStepClamp := 20;
+			
+		20:
+			// Wait Bowl on Conveyor
+			TimerTimeout(IN:= TRUE, PT := tTimeoutBowlLoading);
+			IF IO.iConveyor_Home_Sensor THEN
+				TimerTimeout(IN:= FALSE);
+				IO.oR8_NO_Contact := FALSE;
+				iStepClamp := 30;
+			ELSIF TimerTimeout.Q THEN
+				sStatus := 'Timeout: Bowl not in Conveyor Home!';
+				iStep := 1000;
+			END_IF
+		
+		30: // End
+			bLoadBowl := FALSE;
+			bBowlLoaded := TRUE;
+	END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Conveyor">
+      <LineId Id="191" Count="0" />
+      <LineId Id="407" Count="1" />
+      <LineId Id="413" Count="0" />
+      <LineId Id="409" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="132" Count="2" />
+      <LineId Id="128" Count="0" />
+      <LineId Id="295" Count="1" />
+      <LineId Id="383" Count="0" />
+      <LineId Id="301" Count="4" />
+      <LineId Id="307" Count="11" />
+      <LineId Id="320" Count="11" />
+      <LineId Id="333" Count="0" />
+      <LineId Id="340" Count="1" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="342" Count="1" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="205" Count="0" />
+      <LineId Id="149" Count="0" />
+      <LineId Id="381" Count="0" />
+      <LineId Id="247" Count="0" />
+      <LineId Id="152" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="153" Count="1" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="24" Count="1" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="199" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="167" Count="1" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="109" Count="2" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="38" Count="1" />
+      <LineId Id="249" Count="1" />
+      <LineId Id="376" Count="0" />
+      <LineId Id="345" Count="2" />
+      <LineId Id="344" Count="0" />
+      <LineId Id="349" Count="0" />
+      <LineId Id="251" Count="0" />
+      <LineId Id="357" Count="3" />
+      <LineId Id="356" Count="0" />
+      <LineId Id="362" Count="0" />
+      <LineId Id="386" Count="4" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="363" Count="0" />
+      <LineId Id="361" Count="0" />
+      <LineId Id="348" Count="0" />
+      <LineId Id="350" Count="1" />
+      <LineId Id="353" Count="1" />
+      <LineId Id="352" Count="0" />
+      <LineId Id="355" Count="0" />
+      <LineId Id="258" Count="1" />
+      <LineId Id="266" Count="0" />
+      <LineId Id="260" Count="0" />
+      <LineId Id="271" Count="0" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="261" Count="0" />
+      <LineId Id="268" Count="1" />
+      <LineId Id="267" Count="0" />
+      <LineId Id="262" Count="3" />
+      <LineId Id="272" Count="2" />
+      <LineId Id="391" Count="2" />
+      <LineId Id="395" Count="2" />
+      <LineId Id="394" Count="0" />
+      <LineId Id="406" Count="0" />
+      <LineId Id="398" Count="1" />
+      <LineId Id="401" Count="2" />
+      <LineId Id="405" Count="0" />
+      <LineId Id="400" Count="0" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="12" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Conveyor.a_LoadBowl">
+      <LineId Id="24" Count="1" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="29" Count="4" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="34" Count="1" />
+      <LineId Id="58" Count="3" />
+      <LineId Id="63" Count="1" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="36" Count="7" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="45" Count="1" />
+      <LineId Id="55" Count="2" />
+      <LineId Id="47" Count="4" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="3" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

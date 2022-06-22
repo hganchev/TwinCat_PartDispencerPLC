@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="IO" Id="{fc5588d5-9c11-4f7e-b5be-ac07d3c597e9}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+// ======================== Inputs ==================================
+	// SLOT 1 - EL1809
+	iStation_1_1_Home_Sensor				AT %I* :BOOL;
+	iStation_1_1_Safe_Sensor             	AT %I* :BOOL;
+	iStation_1_1_Dispense_Sensor         	AT %I* :BOOL;
+	iStation_1_2_Home_Sensor             	AT %I* :BOOL;
+	iStation_1_2_Safe_Sensor             	AT %I* :BOOL;
+	iStation_1_2_Dispense_Sensor         	AT %I* :BOOL;
+	iStation_1_3_Home_Sensor             	AT %I* :BOOL;
+	iStation_1_3_Safe_Sensor             	AT %I* :BOOL;
+	iStation_1_3_Dispense_Sensor         	AT %I* :BOOL;
+	iStation_2_1_Home_Sensor             	AT %I* :BOOL;
+	iStation_2_1_Safe_Sensor             	AT %I* :BOOL;
+	iStation_2_1_Dispense_Sensor         	AT %I* :BOOL;
+	iStation_2_2_Home_Sensor             	AT %I* :BOOL;
+	iStation_2_2_Safe_Sensor             	AT %I* :BOOL;
+	iStation_2_2_Dispense_Sensor         	AT %I* :BOOL;
+	iBowl_present_sensor_on_clamp			AT %I* :BOOL;
+
+	// SLOT 2 - EL1809
+	iStation_2_3_Home_Sensor				AT %I* :BOOL;
+	iStation_2_3_Safe_Sensor             	AT %I* :BOOL;
+	iStation_2_3_Dispense_Sensor         	AT %I* :BOOL;
+	iConveyor_Home_Sensor                	AT %I* :BOOL; 
+	iConveyor_Position_1_Sensor				AT %I* :BOOL; 	// Staion 1
+	iConveyor_Position_2_Sensor				AT %I* :BOOL;	// Station 2
+	iConveyor_Position_3_Sensor				AT %I* :BOOL;	// Collection point
+	iBowl_50_percent_full					AT %I* :BOOL;
+	iBowl_25_percent_full					AT %I* :BOOL;
+	iBowl_10_percent_full					AT %I* :BOOL;
+	iStation_1_1_Part_Present_Sensor		AT %I* :BOOL;
+	iStation_1_2_Part_Present_Sensor		AT %I* :BOOL;
+	iStation_1_3_Part_Present_Sensor        AT %I* :BOOL;
+	iStation_2_1_Part_Present_Sensor        AT %I* :BOOL;
+	iStation_2_2_Part_Present_Sensor        AT %I* :BOOL;
+	iStation_2_3_Part_Present_Sensor        AT %I* :BOOL;
+
+// ======================== Outputs ==================================
+	// Slot 3 - EL2809
+	oR1_NO_Contact							AT %Q* :BOOL;
+	oDirection_OF_Driver_1                  AT %Q* :BOOL;
+	oEnable_of_Driver_1                     AT %Q* :BOOL;
+	oR2_NO_Contact                          AT %Q* :BOOL;
+	oDirection_of_Driver_2                  AT %Q* :BOOL;
+	oEnable_of_Driver_2                     AT %Q* :BOOL;
+	oR3_NO_Contact                          AT %Q* :BOOL;
+	oDirection_of_Driver_3                  AT %Q* :BOOL;
+	oEnable_of_Driver_3                     AT %Q* :BOOL;
+	oR4_NO_Contact                          AT %Q* :BOOL;
+	oDirection_of_Driver_4                  AT %Q* :BOOL;
+	oEnable_of_Driver_4                     AT %Q* :BOOL;
+	oR5_NO_Contact                          AT %Q* :BOOL;
+	oDirection_of_Driver_5                  AT %Q* :BOOL;
+	oEnable_of_Driver_5                     AT %Q* :BOOL;
+	oSPARE_1                                AT %Q* :BOOL;
+	
+	// SLot 4 - EL2809
+	oR6_NO_Contact							AT %Q* :BOOL;
+	oDirection_OF_Driver_6                  AT %Q* :BOOL;
+	oEnable_of_Driver_6                     AT %Q* :BOOL;
+	oR7_NO_Contact 							AT %Q* :BOOL;				//(Conveyor)
+	oDirection_of_Driver_7  				AT %Q* :BOOL;				//(Conveyor)
+	oEnable_of_Driver_7  					AT %Q* :BOOL;				//(Conveyor)
+	oR8_NO_Contact 			                AT %Q* :BOOL;
+	oDirection_of_Driver_8                  AT %Q* :BOOL;
+	oEnable_of_Driver_8  	                AT %Q* :BOOL;
+	oSPARE_5                                AT %Q* :BOOL;
+	oSPARE_6                                AT %Q* :BOOL;
+	oSPARE_7                                AT %Q* :BOOL;
+	oSPARE_8                                AT %Q* :BOOL;
+	oSPARE_9                                AT %Q* :BOOL;
+	oSPARE_10                               AT %Q* :BOOL;
+	oSPARE_11                               AT %Q* :BOOL;
+
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

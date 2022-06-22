@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="MAIN" Id="{e47a8857-7317-4c59-bd0b-c9409bde97c2}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	//Conveyor
+	Conveyor		: FB_Conveyor;
+	
+	// Station 1
+	Station1_Bin1	: FB_StationBin;
+	Station1_Bin2	: FB_StationBin;
+	Station1_Bin3	: FB_StationBin;
+	
+	//Station 2
+	Station2_Bin1	: FB_StationBin;
+	Station2_Bin2	: FB_StationBin;
+	Station2_Bin3	: FB_StationBin;
+	
+	// Stations Ready
+	bStation1_Ready : BOOL;
+	bStation2_Ready : BOOL;
+	
+	// Reset Bins
+	bResetCount_Bin1: BOOL;
+	bResetCount_Bin2: BOOL;
+	bResetCount_Bin3: BOOL;
+	bResetCount_Bin4: BOOL;
+	bResetCount_Bin5: BOOL;
+	bResetCount_Bin6: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[a_EnableDrives();
+
+Conveyor(
+	Station_1_Ready:= bStation1_Ready, 
+	Station_2_Ready:= bStation2_Ready, 
+	At_Station_1=> , 
+	At_Station_2=> , 
+	At_Station_3=> , 
+	ResetConvoyor := Globals.ConveyorControl.bReset,
+	sStatus=> Globals.ConveyorControl.sStatus, 
+	bError=> Globals.ConveyorControl.bError);
+	
+Station1_Bin1(
+	bEnableBin := Globals.Bin1Control.bEnable,
+	Home_Sensor:= IO.iStation_1_1_Home_Sensor, 
+	Safe_Sensor:= IO.iStation_1_1_Safe_Sensor, 
+	Dispense_Sensor:= IO.iStation_1_1_Dispense_Sensor, 
+	Part_Present := IO.iStation_1_1_Part_Present_Sensor,
+	Dependency_OK:= NOT Station1_Bin2.Lock_Dependency AND NOT Station1_Bin3.Lock_Dependency, 
+	At_Station:= Conveyor.At_Station_1, 
+	Trigger_OF_Drive=> IO.oR1_NO_Contact, 
+	Direction_OF_Drive=> IO.oDirection_OF_Driver_1, 
+	Lock_Dependency=> , 
+	ResetPartCount := bResetCount_Bin1,
+	ResetBin := Globals.Bin1Control.bReset,
+	bError=> Globals.Bin1Control.bError, 
+	sStatus=> Globals.Bin1Control.sStatus);
+	
+Station1_Bin2(
+	bEnableBin := Globals.Bin2Control.bEnable,
+	Home_Sensor:= IO.iStation_1_2_Home_Sensor, 
+	Safe_Sensor:= IO.iStation_1_2_Safe_Sensor, 
+	Dispense_Sensor:= IO.iStation_1_2_Dispense_Sensor,
+	Part_Present := IO.iStation_1_2_Part_Present_Sensor, 
+	Dependency_OK:= NOT Station1_Bin1.Lock_Dependency AND NOT Station1_Bin3.Lock_Dependency, 
+	At_Station:= Conveyor.At_Station_1, 
+	Trigger_OF_Drive=> IO.oR2_NO_Contact, 
+	Direction_OF_Drive=> IO.oDirection_OF_Driver_2, 
+	Lock_Dependency=> , 
+	ResetPartCount := bResetCount_Bin2,
+	ResetBin := Globals.Bin2Control.bReset,
+	bError=> Globals.Bin2Control.bError , 
+	sStatus=> Globals.Bin2Control.sStatus);
+	
+Station1_Bin3(
+	bEnableBin := Globals.Bin3Control.bEnable,
+	Home_Sensor:= IO.iStation_1_3_Home_Sensor, 
+	Safe_Sensor:= IO.iStation_1_3_Safe_Sensor, 
+	Dispense_Sensor:= IO.iStation_1_3_Dispense_Sensor,
+	Part_Present := IO.iStation_1_3_Part_Present_Sensor, 
+	Dependency_OK:= NOT Station1_Bin1.Lock_Dependency AND NOT Station1_Bin2.Lock_Dependency, 
+	At_Station:= Conveyor.At_Station_1, 
+	Trigger_OF_Drive=> IO.oR3_NO_Contact, 
+	Direction_OF_Drive=> IO.oDirection_OF_Driver_3, 
+	Lock_Dependency=> , 
+	ResetPartCount := bResetCount_Bin3,
+	ResetBin := Globals.Bin3Control.bReset,
+	bError=> Globals.Bin3Control.bError, 
+	sStatus=> Globals.Bin3Control.sStatus);
+	
+Station2_Bin1(
+	bEnableBin := Globals.Bin4Control.bEnable,
+	Home_Sensor:= IO.iStation_2_1_Home_Sensor, 
+	Safe_Sensor:= IO.iStation_2_1_Safe_Sensor, 
+	Dispense_Sensor:= IO.iStation_2_1_Dispense_Sensor,
+	Part_Present := IO.iStation_2_1_Part_Present_Sensor, 
+	Dependency_OK:= NOT Station2_Bin2.Lock_Dependency AND NOT Station2_Bin3.Lock_Dependency, 
+	At_Station:= Conveyor.At_Station_2, 
+	Trigger_OF_Drive=> IO.oR4_NO_Contact, 
+	Direction_OF_Drive=> IO.oDirection_OF_Driver_4, 
+	Lock_Dependency=> , 
+	ResetPartCount := bResetCount_Bin4,
+	ResetBin := Globals.Bin4Control.bReset,
+	bError=>Globals.Bin4Control.bError , 
+	sStatus=> Globals.Bin4Control.sStatus);
+	
+Station2_Bin2(
+	bEnableBin := Globals.Bin5Control.bEnable,
+	Home_Sensor:= IO.iStation_2_2_Home_Sensor, 
+	Safe_Sensor:= IO.iStation_2_2_Safe_Sensor, 
+	Dispense_Sensor:= IO.iStation_2_2_Dispense_Sensor, 
+	Part_Present := IO.iStation_2_2_Part_Present_Sensor,
+	Dependency_OK:= NOT Station2_Bin1.Lock_Dependency AND NOT Station2_Bin3.Lock_Dependency, 
+	At_Station:= Conveyor.At_Station_2, 
+	Trigger_OF_Drive=> IO.oR5_NO_Contact, 
+	Direction_OF_Drive=> IO.oDirection_OF_Driver_5, 
+	Lock_Dependency=> , 
+	ResetPartCount := bResetCount_Bin5,
+	ResetBin := Globals.Bin5Control.bReset,
+	bError=> Globals.Bin5Control.bError, 
+	sStatus=> Globals.Bin5Control.sStatus);
+	
+Station2_Bin3(
+	bEnableBin := Globals.Bin6Control.bEnable,
+	Home_Sensor:= IO.iStation_2_3_Home_Sensor, 
+	Safe_Sensor:= IO.iStation_2_3_Safe_Sensor, 
+	Dispense_Sensor:= IO.iStation_2_3_Dispense_Sensor,
+	Part_Present := IO.iStation_2_3_Part_Present_Sensor, 
+	Dependency_OK:= NOT Station2_Bin1.Lock_Dependency AND NOT Station2_Bin2.Lock_Dependency, 
+	At_Station:= Conveyor.At_Station_2, 
+	Trigger_OF_Drive=> IO.oR6_NO_Contact, 
+	Direction_OF_Drive=> IO.oDirection_OF_Driver_6, 
+	Lock_Dependency=> , 
+	ResetPartCount := bResetCount_Bin6,
+	ResetBin := Globals.Bin6Control.bReset,
+	bError=> Globals.Bin6Control.bError, 
+	sStatus=> Globals.Bin6Control.sStatus);
+	
+// Ready Conditions
+bStation1_Ready := Station1_Bin1.Count_OF_Parts + Station1_Bin2.Count_OF_Parts + Station1_Bin3.Count_OF_Parts >= 15;
+bStation2_Ready := Station2_Bin1.Count_OF_Parts + Station2_Bin2.Count_OF_Parts + Station2_Bin3.Count_OF_Parts >= 15;
+IF Globals.bResetPartCount_Station1 
+AND (Station1_Bin1.Count_OF_Parts + Station1_Bin2.Count_OF_Parts + Station1_Bin3.Count_OF_Parts > 0) THEN
+	bResetCount_Bin1:= TRUE;
+	bResetCount_Bin2:= TRUE;
+	bResetCount_Bin3:= TRUE;
+ELSE
+	Globals.bResetPartCount_Station1 := FALSE;
+END_IF
+
+IF Globals.bResetPartCount_Station2 
+AND (Station2_Bin1.Count_OF_Parts + Station2_Bin2.Count_OF_Parts + Station2_Bin3.Count_OF_Parts > 0) THEN
+	bResetCount_Bin4 := TRUE;
+	bResetCount_Bin5 := TRUE;
+	bResetCount_Bin6 := TRUE;
+ELSE
+	Globals.bResetPartCount_Station2 := FALSE;
+END_IF]]></ST>
+    </Implementation>
+    <Action Name="a_EnableDrives" Id="{89d47b60-9f71-42a4-aad9-e4c22c66f4be}">
+      <Implementation>
+        <ST><![CDATA[IO.oEnable_of_Driver_1 := TRUE;
+IO.oEnable_of_Driver_2 := TRUE;
+IO.oEnable_of_Driver_3 := TRUE;
+IO.oEnable_of_Driver_4 := TRUE;
+IO.oEnable_of_Driver_5 := TRUE;
+IO.oEnable_of_Driver_6 := TRUE;
+IO.oEnable_of_Driver_7 := TRUE;
+IO.oEnable_of_Driver_8 := TRUE;
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="MAIN">
+      <LineId Id="103" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="18" Count="5" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="161" Count="0" />
+      <LineId Id="28" Count="2" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="31" Count="4" />
+      <LineId Id="153" Count="0" />
+      <LineId Id="162" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="40" Count="2" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="43" Count="4" />
+      <LineId Id="154" Count="0" />
+      <LineId Id="163" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="52" Count="2" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="55" Count="4" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="158" Count="0" />
+      <LineId Id="64" Count="2" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="67" Count="4" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="128" Count="0" />
+      <LineId Id="76" Count="2" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="79" Count="4" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="88" Count="2" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="91" Count="4" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="167" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="115" Count="1" />
+      <LineId Id="118" Count="1" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="146" Count="2" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="149" Count="1" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="143" Count="1" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="152" Count="0" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="142" Count="0" />
+    </LineIds>
+    <LineIds Name="MAIN.a_EnableDrives">
+      <LineId Id="1" Count="0" />
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

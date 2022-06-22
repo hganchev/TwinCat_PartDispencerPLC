@@ -1,0 +1,256 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_StationBin" Id="{44b87a21-45c0-4835-aecf-5faccdf116c6}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_StationBin
+VAR_INPUT
+	bEnableBin			: BOOL; // input for Enable Bin 
+	Home_Sensor 		: BOOL; // input for home
+	Safe_Sensor 		: BOOL;	// input for safe
+	Dispense_Sensor 	: BOOL; // input for dispense
+	Part_Present		: BOOL; // input for part present
+	Dependency_OK		: BOOL; // input to check for dependency
+	At_Station			: BOOL; // Input for bowl at station, used for reset condition too
+END_VAR
+VAR_OUTPUT
+	Trigger_Of_Drive	: BOOL;	// Output for Enable of drive movement
+	Direction_OF_Drive	: BOOL; // Output for Direction of drive - TRUE- Direction Positive, False - Direction Negative
+	Lock_Dependency		: BOOL; // Output for Lock Dependency
+	Count_OF_Parts		: INT;	// Counting of loaded parts
+	bError				: BOOL; // Station is in Error
+	sStatus				: STRING(255); // Message
+END_VAR
+VAR_IN_OUT
+	ResetPartCount		: BOOL;		// Reset Counter of parts
+	ResetBin			: BOOL;		// Reset Bin Logic
+END_VAR
+VAR
+	TimerTimeout		: TON; // Use for timeout
+	
+	// Times
+	tTimeoutMoving		: TIME := T#5000MS;
+	tTimeoutDispence	: TIME := T#2000MS;
+	
+	iStep				: INT; // Step of the machine logic
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT bEnableBin THEN
+	iStep := 0;
+	bError := FALSE;
+	sStatus := 'Waiting for bin Enable';
+	Count_OF_Parts := 0;
+	Lock_Dependency := FALSE;
+	Trigger_Of_Drive := FALSE;
+ELSE
+	IF ResetPartCount THEN
+		ResetPartCount := FALSE;
+		Count_OF_Parts := 0;
+	END_IF
+	IF ResetBin THEN
+		ResetBin := FALSE;
+		iStep := 0;
+		Count_OF_Parts := 0;
+		Lock_Dependency := FALSE;
+		Trigger_Of_Drive := FALSE;
+	END_IF
+	CASE iStep OF
+		0:  // Waiting part on Home
+			IF bError THEN
+				bError := FALSE;
+			END_IF
+			sStatus := 'Waiting for Part on Home';
+			IF Home_Sensor 
+			AND Part_Present 
+			THEN
+				iStep := 10;
+			END_IF
+			
+		10: // Move to Safe
+			Trigger_Of_Drive := TRUE;
+			Direction_OF_Drive := TRUE;
+			iStep := 11;
+			
+		11: // Wait Safe Done
+			TimerTimeout(IN := TRUE, PT:= tTimeoutMoving);
+			IF Safe_Sensor THEN
+				Trigger_Of_Drive := FALSE;
+				TimerTimeout(IN := FALSE);
+				iStep := 20;
+			ELSIF TimerTimeout.Q THEN
+				sStatus := 'Timeout When Going to Safe';
+				iStep := 1000; // Error
+			END_IF
+		
+		20: // Check Dependency OK
+			sStatus := 'Waiting Dependency OK';
+			IF Dependency_OK 
+			AND AT_Station 
+			THEN
+				sStatus := 'Going to Dispense';
+				Lock_Dependency := TRUE;
+				iStep := 30;
+			END_IF
+		
+		30: // Move to Dispense
+			Trigger_Of_Drive := TRUE;
+			Direction_OF_Drive := TRUE;
+			iStep := 31;
+			
+		31: // Wait Dispense
+			TimerTimeout(IN := TRUE, PT:= tTimeoutMoving);
+			IF Dispense_Sensor THEN
+				Trigger_Of_Drive := FALSE;
+				TimerTimeout(IN := FALSE);
+				iStep := 40;
+			ELSIF TimerTimeout.Q THEN
+				sStatus := 'Timeout When Going to Dispense';
+				iStep := 1000; // Error
+			END_IF
+		
+		40: // Check Dispense Done
+			TimerTimeout(IN := TRUE, PT:= tTimeoutDispence);
+			IF NOT Part_Present THEN
+				Count_OF_Parts := Count_OF_Parts + 1;
+				TimerTimeout(IN := FALSE);
+				iStep := 50;
+			ELSIF TimerTimeout.Q THEN
+				sStatus := 'Timeout When Not Part Present - Dispense Done';
+				iStep := 1000; // Error
+			END_IF
+			
+		50: // Start Move back to Safety
+			Trigger_Of_Drive := TRUE;
+			Direction_OF_Drive := FALSE;
+			iStep := 51;
+			
+		51: // Wait Move back to Safety
+			TimerTimeout(IN := TRUE, PT:= tTimeoutMoving);
+			IF Safe_Sensor THEN
+				Trigger_Of_Drive := FALSE;
+				Lock_Dependency := FALSE;
+				TimerTimeout(IN := FALSE);
+				iStep := 60;
+			ELSIF TimerTimeout.Q THEN
+				sStatus := 'Timeout When Going back to Safe';
+				iStep := 1000; // Error
+			END_IF
+		
+		60: // Start Move Back To Home
+			Trigger_Of_Drive := TRUE;
+			Direction_OF_Drive := FALSE;
+			iStep := 61;
+		
+		61: // Wait Move Back to Home
+			TimerTimeout(IN := TRUE, PT:= tTimeoutMoving);
+			IF Home_Sensor THEN
+				Trigger_Of_Drive := FALSE;
+				TimerTimeout(IN := FALSE);
+				iStep := 0;
+			ELSIF TimerTimeout.Q THEN
+				sStatus := 'Timeout When Going back to Safe';
+				iStep := 1000; // Error
+			END_IF	
+			
+		1000:
+			bError := TRUE;
+			Trigger_Of_Drive := FALSE;
+			TimerTimeout(IN := FALSE);
+	END_CASE
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_StationBin">
+      <LineId Id="120" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="125" Count="1" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="148" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="174" Count="0" />
+      <LineId Id="167" Count="1" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="185" Count="0" />
+      <LineId Id="179" Count="0" />
+      <LineId Id="182" Count="2" />
+      <LineId Id="180" Count="0" />
+      <LineId Id="9" Count="1" />
+      <LineId Id="85" Count="2" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="163" Count="0" />
+      <LineId Id="42" Count="1" />
+      <LineId Id="13" Count="1" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="47" Count="3" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="91" Count="1" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="146" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="164" Count="1" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="152" Count="0" />
+      <LineId Id="60" Count="3" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="153" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="94" Count="1" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="161" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="97" Count="1" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="154" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="103" Count="2" />
+      <LineId Id="108" Count="1" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="144" Count="0" />
+      <LineId Id="110" Count="4" />
+      <LineId Id="106" Count="1" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="118" Count="1" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="143" Count="0" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="141" Count="1" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="158" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="124" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="Globals" Id="{0ac203a0-db7f-4012-9b3f-3fa091aac4f1}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	ConveyorControl			:ST_StationControls;
+	
+	Bin1Control				:ST_StationControls;
+	Bin2Control				:ST_StationControls;
+	Bin3Control				:ST_StationControls;
+	Bin4Control				:ST_StationControls;
+	Bin5Control				:ST_StationControls;
+	Bin6Control				:ST_StationControls;
+	
+	bResetPartCount_Station1	: BOOL := FALSE;
+	bResetPartCount_Station2	: BOOL := FALSE;
+	
+	axisRef						: AXIS_REF;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>
